@@ -6,11 +6,23 @@ package cast
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
+
+func ToIntSlice(str string) []int {
+	ints := []int{}
+	for _, s := range strings.Split(strings.Trim(str, " "), " ") {
+		val, err := strconv.Atoi(s)
+		if err == nil {
+			ints = append(ints, val)
+		}
+	}
+	return ints
+}
 
 // ToInt will case a given arg into an int type.
 // Supported types are:
-//    - string
+//   - string
 func ToInt(arg interface{}) int {
 	var val int
 	switch arg.(type) {
@@ -28,9 +40,9 @@ func ToInt(arg interface{}) int {
 
 // ToString will case a given arg into an int type.
 // Supported types are:
-//    - int
-//    - byte
-//    - rune
+//   - int
+//   - byte
+//   - rune
 func ToString(arg interface{}) string {
 	var str string
 	switch arg.(type) {
