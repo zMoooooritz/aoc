@@ -20,6 +20,17 @@ func ToIntSlice(str string) []int {
 	return ints
 }
 
+func ToIntSliceSep(str string, sep string) []int {
+	ints := []int{}
+	for _, s := range strings.Split(strings.Trim(str, " "), sep) {
+		val, err := strconv.Atoi(s)
+		if err == nil {
+			ints = append(ints, val)
+		}
+	}
+	return ints
+}
+
 // ToInt will case a given arg into an int type.
 // Supported types are:
 //   - string
