@@ -50,6 +50,28 @@ func part1(input string) int {
 	return result
 }
 
+func part2(input string) int {
+	blocks := parseInput(input)
+
+	result := 0
+	for _, rows := range blocks {
+		cols := tanspose(rows)
+
+		for i := 0; i < len(rows)-1; i++ {
+			if countReflectionMistakes(rows, i) == 1 {
+				result += 100 * (i + 1)
+			}
+		}
+		for i := 0; i < len(cols)-1; i++ {
+			if countReflectionMistakes(cols, i) == 1 {
+				result += i + 1
+			}
+		}
+	}
+
+	return result
+}
+
 func tanspose(data []string) []string {
 	trans := []string{}
 
@@ -65,10 +87,6 @@ func tanspose(data []string) []string {
 	return trans
 }
 
-func part2(input string) int {
-	return 0
-}
-
 func findReflection(data []string) int {
 	for i := 0; i < len(data)-1; i++ {
 		isReflection := true
@@ -82,6 +100,20 @@ func findReflection(data []string) int {
 		}
 	}
 	return 0
+}
+
+func countReflectionMistakes(data []string, index int) int {
+	count := 0
+	for j := 0; index-j >= 0 && index+j+1 < len(data); j++ {
+		line := data[index-j]
+		reflection := data[index+j+1]
+		for k := 0; k < len(line); k++ {
+			if line[k] != reflection[k] {
+				count++
+			}
+		}
+	}
+	return count
 }
 
 func switchAtIndex(in string, i int) string {
