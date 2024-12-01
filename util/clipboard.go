@@ -1,24 +1,9 @@
 package util
 
 import (
-	"bytes"
-	"fmt"
-	"os/exec"
+	"github.com/atotto/clipboard"
 )
 
-// CopyToClipboard is for macOS
 func CopyToClipboard(text string) error {
-	command := exec.Command("xsel --clipboard --input")
-	command.Stdin = bytes.NewReader([]byte(text))
-
-	if err := command.Start(); err != nil {
-		return fmt.Errorf("error starting pbcopy command: %w", err)
-	}
-
-	err := command.Wait()
-	if err != nil {
-		return fmt.Errorf("error running pbcopy %w", err)
-	}
-
-	return nil
+	return clipboard.WriteAll(text)
 }
