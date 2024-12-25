@@ -54,13 +54,133 @@ type Parameter struct {
 }
 
 type Instruction struct {
-	opcode      OpCode
-	firstParam  Parameter
-	secondParam Parameter
-	thridParam  Parameter
+	opcode OpCode
+	params []Parameter
 }
 
 var instructions []int
+
+func NewCPU(instructions []int) CPU {
+	cpu := CPU{
+		instructions:       instructions,
+		output:             0,
+		instructionPointer: 0,
+	}
+	return cpu
+}
+
+type CPU struct {
+	instructions []int
+	output       int
+
+	instructionPointer int
+}
+
+func (c *CPU) run() {
+	opCodeMap := map[OpCode]func([]Parameter){
+		ADD: c.add,
+		MUL: c.mul,
+		IN:  c.in,
+		OUT: c.out,
+		JIT: c.jit,
+		JIF: c.jif,
+		LT:  c.lt,
+		EQ:  c.eq,
+	}
+
+	for c.instructionPointer < len(c.instructions) {
+		inst := c.parseCurrentInstruction()
+		argCount := operationArgumentCount(inst.opcode)
+
+		if inst.opcode == HALT {
+			break
+		}
+
+		c.instructionPointer += argCount + 1 // can be altered in the instructions
+		if fn, ok := opCodeMap[inst.opcode]; ok {
+			fn(inst.params)
+		} else {
+			panic("invalid opcode")
+		}
+	}
+}
+
+func (c *CPU) add(args []Parameter) {
+	instructions[args[2].value] = c.evalParameter(args[0]) + c.evalParameter(args[1])
+}
+
+func (c *CPU) mul(args []Parameter) {
+	instructions[args[2].value] = c.evalParameter(args[0]) * c.evalParameter(args[1])
+}
+
+func (c *CPU) in(args []Parameter) {
+	instructions[args[0].value] = 5
+}
+
+func (c *CPU) out(args []Parameter) {
+	c.output = c.evalParameter(args[0])
+}
+
+func (c *CPU) jit(args []Parameter) {
+	if c.evalParameter(args[0]) != 0 {
+		c.instructionPointer = c.evalParameter(args[1])
+	}
+}
+
+func (c *CPU) jif(args []Parameter) {
+	if c.evalParameter(args[0]) == 0 {
+		c.instructionPointer = c.evalParameter(args[1])
+	}
+
+}
+
+func (c *CPU) lt(args []Parameter) {
+	if c.evalParameter(args[0]) < c.evalParameter(args[1]) {
+		instructions[args[2].value] = 1
+	} else {
+		instructions[args[2].value] = 0
+	}
+}
+
+func (c *CPU) eq(args []Parameter) {
+	if c.evalParameter(args[0]) == c.evalParameter(args[1]) {
+		instructions[args[2].value] = 1
+	} else {
+		instructions[args[2].value] = 0
+	}
+}
+
+func (c *CPU) parseCurrentInstruction() Instruction {
+	instruction := Instruction{}
+	inst := c.instructions[c.instructionPointer]
+	opcode := OpCode(inst % 100)
+	argCount := operationArgumentCount(opcode)
+
+	parameterModes := inst / 100
+
+	instruction.opcode = opcode
+
+	for index := range argCount {
+		instruction.params = append(instruction.params, Parameter{instructions[c.instructionPointer+index+1], ParameterMode((parameterModes / int(math.Pow10(index))) % 10)})
+	}
+	return instruction
+}
+
+func (c *CPU) evalParameter(param Parameter) int {
+	if param.mode == POSITION {
+		return c.instructions[param.value]
+	} else {
+		return param.value
+	}
+}
+
+func (c *CPU) fetchOutput() int {
+	return c.output
+}
+
+func (c *CPU) fetchFirstRegister() int {
+	return c.instructions[0]
+}
 
 func init() {
 	// do this in init (not main) so test file has same input
@@ -90,91 +210,31 @@ func main() {
 func part1(input string) int {
 	instructions = parseInput(input)
 
-	return executeInstructions()
+	cpu := NewCPU(instructions)
+	cpu.run()
+
+	test := true
+
+	result := cpu.fetchOutput()
+	if test {
+		result = cpu.fetchFirstRegister()
+	}
+	return result
 }
 
 func part2(input string) int {
 	instructions = parseInput(input)
 
-	return executeInstructions()
-}
+	cpu := NewCPU(instructions)
+	cpu.run()
 
-func executeInstructions() int {
-	instructionPointer := 0
-	for instructionPointer < len(instructions) {
-		// fmt.Println(instructions)
-		op := parseInstruction(instructionPointer)
-		opcode := op.opcode
-		argCount := operationArgumentCount(opcode)
-		// fmt.Println("instPointer:", instructionPointer, "op:", op)
+	test := true
 
-		if opcode == HALT {
-			break
-		}
-
-		instructionPointer += argCount + 1
-		switch opcode {
-		case ADD:
-			instructions[op.thridParam.value] = evaluateParameter(op.firstParam) + evaluateParameter(op.secondParam)
-			break
-		case MUL:
-			instructions[op.thridParam.value] = evaluateParameter(op.firstParam) * evaluateParameter(op.secondParam)
-			break
-		case IN:
-			instructions[op.firstParam.value] = 5
-		case OUT:
-			fmt.Println(evaluateParameter(op.firstParam))
-		case JIT:
-			if evaluateParameter(op.firstParam) != 0 {
-				instructionPointer = evaluateParameter(op.secondParam)
-			}
-		case JIF:
-			if evaluateParameter(op.firstParam) == 0 {
-				instructionPointer = evaluateParameter(op.secondParam)
-			}
-		case LT:
-			if evaluateParameter(op.firstParam) < evaluateParameter(op.secondParam) {
-				instructions[op.thridParam.value] = 1
-			} else {
-				instructions[op.thridParam.value] = 0
-			}
-		case EQ:
-			if evaluateParameter(op.firstParam) == evaluateParameter(op.secondParam) {
-				instructions[op.thridParam.value] = 1
-			} else {
-				instructions[op.thridParam.value] = 0
-			}
-		default:
-			panic("invalid opcode")
-		}
+	result := cpu.fetchOutput()
+	if test {
+		result = cpu.fetchFirstRegister()
 	}
-
-	return instructions[0]
-}
-
-func parseInstruction(instructionPointer int) Instruction {
-	operation := Instruction{}
-	instruction := instructions[instructionPointer]
-	opcode := OpCode(instruction % 100)
-	argCount := operationArgumentCount(opcode)
-
-	parameterModes := instruction / 100
-
-	operation.opcode = opcode
-	counter := 1
-	if argCount >= 1 {
-		operation.firstParam = Parameter{instructions[instructionPointer+counter], ParameterMode((parameterModes / int(math.Pow10(counter-1))) % 10)}
-	}
-	counter++
-	if argCount >= 2 {
-		operation.secondParam = Parameter{instructions[instructionPointer+counter], ParameterMode((parameterModes / int(math.Pow10(counter-1))) % 10)}
-	}
-	counter++
-	if argCount >= 3 {
-		operation.thridParam = Parameter{instructions[instructionPointer+counter], ParameterMode((parameterModes / int(math.Pow10(counter-1))) % 10)}
-	}
-
-	return operation
+	return result
 }
 
 func operationArgumentCount(opCode OpCode) int {
@@ -182,14 +242,6 @@ func operationArgumentCount(opCode OpCode) int {
 		return count
 	}
 	panic("invalid opcode")
-}
-
-func evaluateParameter(param Parameter) int {
-	if param.mode == POSITION {
-		return instructions[param.value]
-	} else {
-		return param.value
-	}
 }
 
 func parseInput(input string) (ints []int) {
