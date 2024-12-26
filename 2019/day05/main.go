@@ -58,8 +58,6 @@ type Instruction struct {
 	params []Parameter
 }
 
-var instructions []int
-
 func NewCPU(instructions []int) CPU {
 	cpu := CPU{
 		instructions:       instructions,
@@ -90,7 +88,7 @@ func (c *CPU) run() {
 
 	for c.instructionPointer < len(c.instructions) {
 		inst := c.parseCurrentInstruction()
-		argCount := operationArgumentCount(inst.opcode)
+		argCount := c.operationArgumentCount(inst.opcode)
 
 		if inst.opcode == HALT {
 			break
@@ -106,15 +104,15 @@ func (c *CPU) run() {
 }
 
 func (c *CPU) add(args []Parameter) {
-	instructions[args[2].value] = c.evalParameter(args[0]) + c.evalParameter(args[1])
+	c.instructions[args[2].value] = c.evalParameter(args[0]) + c.evalParameter(args[1])
 }
 
 func (c *CPU) mul(args []Parameter) {
-	instructions[args[2].value] = c.evalParameter(args[0]) * c.evalParameter(args[1])
+	c.instructions[args[2].value] = c.evalParameter(args[0]) * c.evalParameter(args[1])
 }
 
 func (c *CPU) in(args []Parameter) {
-	instructions[args[0].value] = 5
+	c.instructions[args[0].value] = 5
 }
 
 func (c *CPU) out(args []Parameter) {
@@ -136,17 +134,17 @@ func (c *CPU) jif(args []Parameter) {
 
 func (c *CPU) lt(args []Parameter) {
 	if c.evalParameter(args[0]) < c.evalParameter(args[1]) {
-		instructions[args[2].value] = 1
+		c.instructions[args[2].value] = 1
 	} else {
-		instructions[args[2].value] = 0
+		c.instructions[args[2].value] = 0
 	}
 }
 
 func (c *CPU) eq(args []Parameter) {
 	if c.evalParameter(args[0]) == c.evalParameter(args[1]) {
-		instructions[args[2].value] = 1
+		c.instructions[args[2].value] = 1
 	} else {
-		instructions[args[2].value] = 0
+		c.instructions[args[2].value] = 0
 	}
 }
 
@@ -154,16 +152,25 @@ func (c *CPU) parseCurrentInstruction() Instruction {
 	instruction := Instruction{}
 	inst := c.instructions[c.instructionPointer]
 	opcode := OpCode(inst % 100)
-	argCount := operationArgumentCount(opcode)
+	argCount := c.operationArgumentCount(opcode)
 
 	parameterModes := inst / 100
 
 	instruction.opcode = opcode
 
+	fmt.Println("OpCode:", opcode)
+
 	for index := range argCount {
-		instruction.params = append(instruction.params, Parameter{instructions[c.instructionPointer+index+1], ParameterMode((parameterModes / int(math.Pow10(index))) % 10)})
+		instruction.params = append(instruction.params, Parameter{c.instructions[c.instructionPointer+index+1], ParameterMode((parameterModes / int(math.Pow10(index))) % 10)})
 	}
 	return instruction
+}
+
+func (c *CPU) operationArgumentCount(opCode OpCode) int {
+	if count, ok := opArgCount[opCode]; ok {
+		return count
+	}
+	panic("invalid opcode")
 }
 
 func (c *CPU) evalParameter(param Parameter) int {
@@ -208,7 +215,7 @@ func main() {
 }
 
 func part1(input string) int {
-	instructions = parseInput(input)
+	instructions := parseInput(input)
 
 	cpu := NewCPU(instructions)
 	cpu.run()
@@ -223,7 +230,7 @@ func part1(input string) int {
 }
 
 func part2(input string) int {
-	instructions = parseInput(input)
+	instructions := parseInput(input)
 
 	cpu := NewCPU(instructions)
 	cpu.run()
@@ -235,13 +242,6 @@ func part2(input string) int {
 		result = cpu.fetchFirstRegister()
 	}
 	return result
-}
-
-func operationArgumentCount(opCode OpCode) int {
-	if count, ok := opArgCount[opCode]; ok {
-		return count
-	}
-	panic("invalid opcode")
 }
 
 func parseInput(input string) (ints []int) {
