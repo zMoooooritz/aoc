@@ -64,6 +64,9 @@ func part1(input string) int {
 				} else {
 					value *= o
 				}
+				if value > equation.value {
+					break
+				}
 			}
 			if value == equation.value {
 				result += value
@@ -108,6 +111,9 @@ func part2(input string) int {
 					value *= o
 				} else {
 					value = concatInts(value, o)
+				}
+				if value > equation.value {
+					break
 				}
 			}
 			if value == equation.value {
